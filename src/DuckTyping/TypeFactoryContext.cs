@@ -156,26 +156,5 @@ namespace DuckTyping
         {
             return this.TypeBuilder.GetInterfaces().FirstOrDefault((type) => ifaceType == type) != null;
         }
-
-        // /// <summary>
-        // /// Gets the adapter constructor.
-        // /// </summary>
-        // /// <param name="targetType">The target type.</param>
-        // /// <param name="adpaterType">The adapter type</param>
-        // /// <returns></returns>
-        // public ConstructorInfo GetAdapterConstructor(Type targetType, Type adpaterType)
-        // {
-        //     if (this.DoesTypeBuilderImplementInterface(adpaterType) == true)
-        //     {
-        //         return this.ConstructorBuilder;
-        //     }
-
-        //     // We need to create a new adapted object.
-        //     Type adapterType = targetType.CreateDuckType()
-        //         adpaterType,
-        //         this.ServiceProvider);
-
-        //     return adapterType.GetConstructor(new[] { targetType, typeof(IServiceProvider) });
-        // }
     }
 }
