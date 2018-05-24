@@ -1,4 +1,4 @@
-﻿namespace DuckTyping
+﻿namespace SharpDuck
 {
     /// <summary>
     /// Defines members of the duck typed interface.

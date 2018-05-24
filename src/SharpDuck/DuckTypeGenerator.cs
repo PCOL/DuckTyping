@@ -1,4 +1,4 @@
-﻿namespace DuckTyping
+﻿namespace SharpDuck
 {
     using System;
     using System.CodeDom;
@@ -9,7 +9,7 @@
     using System.Text;
     using System.Threading.Tasks;
 
-    using DuckTyping.Reflection;
+    using SharpDuck.Reflection;
 
     /// <summary>
     /// A factory for building duck types.

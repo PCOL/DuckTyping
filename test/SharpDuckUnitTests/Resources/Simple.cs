@@ -1,4 +1,4 @@
-namespace DuckTypingUnitTests.Resources
+namespace SharpDuckUnitTests.Resources
 {
     public class Simple
     {

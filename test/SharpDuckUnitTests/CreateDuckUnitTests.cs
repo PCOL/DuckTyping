@@ -1,8 +1,8 @@
-namespace DuckTypingUnitTests
+namespace SharpDuckUnitTests
 {
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using DuckTypingUnitTests.Resources;
-    using DuckTyping;
+    using SharpDuckUnitTests.Resources;
+    using SharpDuck;
 
     [TestClass]
     public class CreateDuckUnitTests
