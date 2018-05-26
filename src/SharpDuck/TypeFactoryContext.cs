@@ -1,33 +1,10 @@
-﻿/*
-MIT License
-
-Copyright (c) 2017 P Collyer
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
-namespace SharpDuck
+﻿namespace SharpDuck
 {
     using System;
     using System.Linq;
     using System.Reflection;
     using System.Reflection.Emit;
+    using FluentIL;
 
     /// <summary>
     /// Represent contextual data used by <see cref="TypeFactory"/> implementations.
@@ -40,51 +17,45 @@ namespace SharpDuck
         /// <param name="typeBuilder">The <see cref="TypeBuilder"/> being use to create the type.</param>
         /// <param name="newType">The new type being built.</param>
         /// <param name="baseType">The base type being built on.</param>
-        /// <param name="dependencyScope">The current dependency injection scope</param>
+        /// <param name="serviceProvider">The current dependency injection scope</param>
         /// <param name="baseObjectField">The <see cref="FieldBuilder"/> that holds the base type instance.</param>
-        /// <param name="serviceProviderField">The <see cref="FieldBuilder"/> that holds the <see cref="IDependencyResolver"/> instance.</param>
+        /// <param name="serviceProviderField">The <see cref="FieldBuilder"/> that holds the <see cref="IServiceProvider"/> instance.</param>
         /// <param name="ctorBuilder">The <see cref="ConstructorBuilder"/> for the types constructor.</param>
         public TypeFactoryContext(
-            TypeBuilder typeBuilder,
+            ITypeBuilder typeBuilder,
             Type newType,
             Type baseType,
-            IServiceProvider dependencyScope,
-            FieldBuilder baseObjectField,
-            FieldBuilder serviceProviderField,
-            ConstructorBuilder ctorBuilder = null)
-            : this(typeBuilder,
-            newType,
-            new Type[] { baseType },
-            dependencyScope,
-            baseObjectField,
-            serviceProviderField,
-            ctorBuilder)
+            IServiceProvider serviceProvider,
+            IFieldBuilder baseObjectField,
+            IFieldBuilder serviceProviderField,
+            IConstructorBuilder ctorBuilder = null)
+            : this(typeBuilder, newType, new Type[] { baseType }, serviceProvider, baseObjectField, serviceProviderField, ctorBuilder)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeFactoryContext"/> class.
         /// </summary>
-        /// <param name="typeBuilder">The <see cref="TypeBuilder"/> being use to create the type.</param>
+        /// <param name="typeBuilder">The <see cref="ITypeBuilder"/> being use to create the type.</param>
         /// <param name="newType">The new type being built.</param>
         /// <param name="baseTypes">The base types being built on.</param>
-        /// <param name="dependencyScope">The current dependency injection scope</param>
-        /// <param name="baseObjectField">The <see cref="FieldBuilder"/> that holds the base type instance.</param>
-        /// <param name="serviceProviderField">The <see cref="FieldBuilder"/> that holds the <see cref="IDependencyResolver"/> instance.</param>
-        /// <param name="ctorBuilder">The <see cref="ConstructorBuilder"/> for the Itypes constructor.</paramI>
+        /// <param name="serviceProvider">The current dependency injection scope</param>
+        /// <param name="baseObjectField">The <see cref="IFieldBuilder"/> that holds the base type instance.</param>
+        /// <param name="serviceProviderField">The <see cref="IFieldBuilder"/> that holds the <see cref="IServiceProvider"/> instance.</param>
+        /// <param name="ctorBuilder">The <see cref="ConstructorBuilder"/> for the Itypes constructor.</param>
         public TypeFactoryContext(
-            TypeBuilder typeBuilder,
+            ITypeBuilder typeBuilder,
             Type newType,
             Type[] baseTypes,
-            IServiceProvider dependencyScope,
-            FieldBuilder baseObjectField,
-            FieldBuilder serviceProviderField,
-            ConstructorBuilder ctorBuilder = null)
+            IServiceProvider serviceProvider,
+            IFieldBuilder baseObjectField,
+            IFieldBuilder serviceProviderField,
+            IConstructorBuilder ctorBuilder = null)
         {
             this.TypeBuilder = typeBuilder;
             this.NewType = newType;
             this.BaseTypes = baseTypes;
-            this.ServiceProvider = dependencyScope;
+            this.ServiceProvider = serviceProvider;
             this.BaseObjectField = baseObjectField;
             this.ServiceProviderField = serviceProviderField;
             this.ConstructorBuilder = ctorBuilder;
@@ -93,7 +64,7 @@ namespace SharpDuck
         /// <summary>
         ///  Gets the <see cref="TypeBuilder"/>
         /// </summary>
-        public TypeBuilder TypeBuilder { get; }
+        public ITypeBuilder TypeBuilder { get; }
 
         /// <summary>
         /// Gets the new type.
@@ -124,17 +95,17 @@ namespace SharpDuck
         /// <summary>
         /// Gets the <see cref="FieldBuilder"/> which will contain the base object instance.
         /// </summary>
-        public FieldBuilder BaseObjectField { get; }
+        public IFieldBuilder BaseObjectField { get; }
 
         /// <summary>
         /// Gets the <see cref="FieldBuilder"/> which will contain the dependency injection resolver.
         /// </summary>
-        public FieldBuilder ServiceProviderField { get; }
+        public IFieldBuilder ServiceProviderField { get; }
 
         /// <summary>
         /// Gets the <see cref="ConstructorBuilder"/> used to construct the new object.
         /// </summary>
-        public ConstructorBuilder ConstructorBuilder { get; }
+        public IConstructorBuilder ConstructorBuilder { get; }
 
         /// <summary>
         /// Creates a new <see cref="TypeFactoryContext"/> instance for a new interface type.
@@ -154,7 +125,9 @@ namespace SharpDuck
         /// <returns>True if it does; otherwise false.</returns>
         public bool DoesTypeBuilderImplementInterface(Type ifaceType)
         {
-            return this.TypeBuilder.GetInterfaces().FirstOrDefault((type) => ifaceType == type) != null;
+            return this.TypeBuilder
+                .Interfaces
+                .FirstOrDefault((type) => ifaceType == type) != null;
         }
     }
 }

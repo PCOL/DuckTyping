@@ -1,9 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionSuffix>alpha1</VersionSuffix>
+    <PackageId>SharpDuck</PackageId>
+    <Authors>pcol</Authors>
+    <AssemblyTitle>SharpDuck</AssemblyTitle>
+    <Description>A contract based duck typing library.</Description>
+    <PackageReleaseNotes>Initial release</PackageReleaseNotes>
+    <PackageTags>duck typing dynamic</PackageTags>
+    <PackageProjectUrl>https://github.com/PCOL/DuckTyping</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/PCOL/DuckTyping/blob/master/LICENSE</PackageLicenseUrl>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <DebugType>portable</DebugType>
+    <AssemblyName>SharpDuck</AssemblyName>
+    <NetStandardImplicitPackageVersion>2.0.0</NetStandardImplicitPackageVersion>
+    <CodeAnalysisRuleSet>../../ca.ruleset</CodeAnalysisRuleSet>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.0.2" />
     <PackageReference Include="System.Reflection" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="2.0.4" />
@@ -14,14 +30,8 @@
     <Content Include="DuckTypeGenerator.cs" />
     <Content Include="DuckTypingExtensionMethods.cs" />
     <Content Include="IDuckTypeGenerator.cs" />
-    <Content Include="Reflection\TypeFactory.cs" />
-    <Content Include="Reflection\AssemblyBuilderCache.cs" />
-    <Content Include="Reflection\AssemblyCache.cs" />
-    <Content Include="Reflection\ReflectionExtensions.cs" />
     <Content Include="Utility.cs" />
     <Content Include="TypeFactoryContext.cs" />
-    <Content Include="Reflection\PropertyExtensionMethods.cs" />
     <Content Include="Reflection\EmitExtensionMethods.cs" />
-    <Content Include="Reflection\ArrayBuilder.cs" />
   </ItemGroup>
 </Project>

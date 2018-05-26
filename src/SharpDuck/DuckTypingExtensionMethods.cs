@@ -8,6 +8,9 @@
     /// </summary>
     public static class DuckTypingExtensionMethods
     {
+        /// <summary>
+        /// Gets or sets the services.
+        /// </summary>
         public static IServiceProvider Services { get; set; }
 
         /// <summary>

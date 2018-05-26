@@ -9,6 +9,7 @@
     using System.Text;
     using System.Threading.Tasks;
 
+    using FluentIL;
     using SharpDuck.Reflection;
 
     /// <summary>
@@ -166,30 +167,25 @@
         /// <returns>A duck type.</returns>
         private Type GenerateType(Type baseType, Type[] duckTypes, IServiceProvider serviceProvider)
         {
-            TypeAttributes typeAttributes = TypeAttributes.Class | TypeAttributes.Public;
-
-            TypeBuilder typeBuilder = TypeFactory
+            var typeBuilder = TypeFactory
                 .Default
-                .ModuleBuilder
-                .DefineType(
-                    TypeName(baseType, duckTypes),
-                    typeAttributes);
+                .NewType(TypeName(baseType, duckTypes))
+                .Public()
+                .Class()
+                .Implements<IDuckTypedObject>()
+                .ImplementsInterfaces(duckTypes);
 
-            FieldBuilder baseTypeField = typeBuilder
-                .DefineField(
-                    "target",
-                    baseType,
-                    FieldAttributes.Private);
+            var baseTypeField = typeBuilder
+                .NewField("target", baseType)
+                .Private();
 
-            FieldBuilder serviceProviderField = typeBuilder
-                .DefineField(
-                    "serviceProvider",
-                    typeof(IServiceProvider),
-                    FieldAttributes.Private);
+            var serviceProviderField = typeBuilder
+                .NewField<IServiceProvider>("serviceProvider")
+                .Private();
 
             foreach (Type duckType in duckTypes)
             {
-                TypeFactoryContext context = new TypeFactoryContext(typeBuilder, duckType, baseType, serviceProvider, baseTypeField, serviceProviderField);
+                var context = new TypeFactoryContext(typeBuilder, duckType, baseType, serviceProvider, baseTypeField, serviceProviderField);
                 this.ImplementInterfaces(context);
             }
 
@@ -200,7 +196,7 @@
             this.AddConstructor(typeBuilder, baseType, baseTypeField, serviceProviderField);
 
             // Create the type.
-            return typeBuilder.CreateTypeInfo().AsType();
+            return typeBuilder.CreateType();
         }
 
         /// <summary>
@@ -211,39 +207,35 @@
         /// <param name="baseTypeField">The <see cref="FieldBuilder"/> which will hold the instances of the base types.</param>
         /// <param name="serviceProviderField">The <see cref="FieldBuilder"/> which will hold the instance of the dependency injection resolver.</param>
         private void AddConstructor(
-            TypeBuilder typeBuilder,
+            ITypeBuilder typeBuilder,
             Type baseType,
-            FieldBuilder baseTypeField,
-            FieldBuilder serviceProviderField)
+            IFieldBuilder baseTypeField,
+            IFieldBuilder serviceProviderField)
         {
             // Build Constructor.
-            ConstructorBuilder constructorBuilder = typeBuilder
-                .DefineConstructor(
-                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
-                    CallingConventions.HasThis,
-                    new[]
-                    {
-                        baseType,
-                        typeof(IServiceProvider)
-                    });
+            var constructorBuilder = typeBuilder
+                .NewConstructor()
+                .Public()
+                .HideBySig()
+                .SpecialName()
+                .RTSpecialName()
+                .CallingConvention(CallingConventions.HasThis)
+                .Param(baseType, "target")
+                .Param<IServiceProvider>("serviceProvider");
 
-            constructorBuilder.DefineParameter(1, ParameterAttributes.None, "target");
-            constructorBuilder.DefineParameter(2, ParameterAttributes.None, "serviceProvider");
+            constructorBuilder
+                .Body()
+                .LdArg0()
+                .Call(baseType.GetConstructor(new Type[0]))
 
-            ILGenerator il = constructorBuilder.GetILGenerator();
+                .LdArg0()
+                .LdArg1()
+                .StFld(baseTypeField)
 
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Call, baseType.GetConstructor(new Type[0]));
-
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Stfld, baseTypeField);
-
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldarg_2);
-            il.Emit(OpCodes.Stfld, serviceProviderField);
-
-            il.Emit(OpCodes.Ret);
+                .LdArg0()
+                .LdArg2()
+                .StFld(serviceProviderField)
+                .Ret();
         }
 
         /// <summary>
@@ -252,48 +244,26 @@
         /// <param name="typeBuilder">The <see cref="TypeBuilder"/> use to construct the type.</param>
         /// <param name="baseTypeField">The <see cref="FieldBuilder"/> which will hold the instance of the type being duck typed.</param>
         private void ImplementDuckTypedObjectInterface(
-            TypeBuilder typeBuilder,
-            FieldBuilder baseTypeField)
+            ITypeBuilder typeBuilder,
+            IFieldBuilder baseTypeField)
         {
-            typeBuilder.AddInterfaceImplementation(typeof(IDuckTypedObject));
-
-            PropertyBuilder propertyAdaptedObject = typeBuilder
-                .DefineProperty(
-                    "DuckTypedObject",
-                    PropertyAttributes.None,
-                    typeof(object),
-                    new Type[0]);
-
-            MethodBuilder getAdaptedObject = typeBuilder
-                .DefineMethod("get_DuckTypedObject",
-                    MethodAttributes.Virtual | MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
-                    CallingConventions.HasThis,
-                    typeof(object),
-                    new Type[0]);
-
-            ILGenerator il = getAdaptedObject.GetILGenerator();
-            il.Emit(OpCodes.Ldarg_0);
-            il.Emit(OpCodes.Ldfld, baseTypeField);
-            il.Emit(OpCodes.Ret);
-
-            propertyAdaptedObject.SetGetMethod(getAdaptedObject);
+            var propertyAdaptedObject = typeBuilder
+                .NewProperty<object>("DuckTypedObject")
+                .Getter(m => m
+                    .Public()
+                    .Virtual()
+                    .HideBySig()
+                    .NewSlot()
+                    .CallingConvention(CallingConventions.HasThis)
+                    .Body(il => il
+                        .LdArg0()
+                        .LdFld(baseTypeField)
+                        .Ret()));
         }
 
         private void ImplementInterfaces(TypeFactoryContext context)
         {
-            Dictionary<string, MethodBuilder> propertyMethods = new Dictionary<string, MethodBuilder>();
-
-            Type[] implementedInterfaces = context.NewType.GetInterfaces();
-            if (implementedInterfaces.IsNullOrEmpty() == false)
-            {
-                foreach (Type iface in implementedInterfaces)
-                {
-                    TypeFactoryContext ifaceContext = context.CreateTypeFactoryContext(iface);
-                    this.ImplementInterfaces(ifaceContext);
-                }
-            }
-
-            context.TypeBuilder.AddInterfaceImplementation(context.NewType);
+            var propertyMethods = new Dictionary<string, IMethodBuilder>();
 
             foreach (var memberInfo in context.NewType.GetMembers())
             {
@@ -307,14 +277,26 @@
                     {
                         Type[] genericArguments = methodInfo.GetGenericArguments();
 
-                        MethodBuilder methodBuilder = context
+                        var methodBuilder = context
                             .TypeBuilder
-                            .DefineMethod(
-                                methodInfo.Name,
-                                MethodAttributes.Public | MethodAttributes.Virtual,
-                                methodInfo.ReturnType,
-                                methodArgs);
+                            .NewMethod(methodInfo.Name)
+                            .Public()
+                            .Virtual()
+                            .Params(methodArgs)
+                            .Returns(methodInfo.ReturnType);
 
+                        methodBuilder
+                            .NewGenericParameters(
+                                genericArguments.Select(t => t.Name).ToArray(),
+                                (gps) =>
+                                {
+                                    for (int m = 0; m < gps.Length; m++)
+                                    {
+                                        gps[m].Attributes = genericArguments[m].GenericParameterAttributes;
+                                    }
+                                });
+
+/*
                         GenericTypeParameterBuilder[] genericTypeParameterBuilder = methodBuilder
                             .DefineGenericParameters(
                                 genericArguments
@@ -325,8 +307,9 @@
                         {
                             genericTypeParameterBuilder[m].SetGenericParameterAttributes(genericArguments[m].GetTypeInfo().GenericParameterAttributes);
                         }
+*/
 
-                        ILGenerator methodIL = methodBuilder.GetILGenerator();
+                        var methodIL = methodBuilder.Body();
 
                         if (context.BaseType.GetMethod(methodInfo.Name, methodInfo.GetGenericArguments()) == null)
                         {
@@ -335,33 +318,45 @@
                             continue;
                         }
 
-                        LocalBuilder methodReturn = null;
+                        ILocal methodReturn = null;
                         if (methodInfo.ReturnType != typeof(void))
                         {
-                            methodReturn = methodIL.DeclareLocal(methodInfo.ReturnType);
+                            methodIL.DeclareLocal(methodInfo.ReturnType, out methodReturn);
                         }
 
-                        methodIL.Emit(OpCodes.Ldarg_0);
-                        methodIL.Emit(OpCodes.Ldfld, context.BaseObjectField);
-                        methodIL.EmitLoadParameters(methodInfo);
+                        methodIL
+                            .LdArg0()
+                            .LdFld(context.BaseObjectField)
+                            .EmitLoadParameters(methodInfo);
+
                         MethodInfo callMethod1 = context.BaseObjectField.FieldType.GetMethod(memberInfo.Name, genericArguments);
                         MethodInfo callMethod = context.BaseObjectField.FieldType.GetMethod(memberInfo.Name, methodArgs).MakeGenericMethod(genericArguments);
-                        methodIL.Emit(OpCodes.Callvirt, callMethod1);
+
+                        methodIL
+                            .CallVirt(callMethod1);
 
                         if (methodReturn != null)
                         {
-                            methodIL.Emit(OpCodes.Stloc_0);
-                            methodIL.Emit(OpCodes.Ldloc_0);
+                            methodIL
+                                .StLoc(methodReturn)
+                                .LdLoc(methodReturn);
                         }
 
-                        methodIL.Emit(OpCodes.Ret);
+                        methodIL.Ret();
                     }
                     else
                     {
                         MethodAttributes attrs = methodInfo.Attributes & ~MethodAttributes.Abstract;
-                        MethodBuilder methodBuilder = context.TypeBuilder.DefineMethod(methodInfo.Name, attrs, methodInfo.ReturnType, methodArgs);
+                        var methodBuilder = context
+                            .TypeBuilder
+                            .NewMethod(
+                                methodInfo.Name,
+                                attrs,
+                                CallingConventions.HasThis,
+                                methodInfo.ReturnType)
+                            .Params(methodArgs);
 
-                        ILGenerator methodIL = methodBuilder.GetILGenerator();
+                        var methodIL = methodBuilder.Body();
 
                         if (context.BaseType.GetMethod(methodInfo.Name, methodArgs) == null)
                         {
@@ -370,25 +365,29 @@
                             continue;
                         }
 
-                        LocalBuilder methodReturn = null;
+                        ILocal methodReturn = null;
                         if (methodInfo.ReturnType != typeof(void))
                         {
-                            methodReturn = methodIL.DeclareLocal(methodInfo.ReturnType);
+                            methodIL.DeclareLocal(methodInfo.ReturnType, out methodReturn);
                         }
 
-                        methodIL.Emit(OpCodes.Ldarg_0);
-                        methodIL.Emit(OpCodes.Ldfld, context.BaseObjectField);
-                        methodIL.EmitLoadParameters(methodInfo);
+                        methodIL
+                            .LdArg0()
+                            .LdFld(context.BaseObjectField)
+                            .EmitLoadParameters(methodInfo);
+
                         MethodInfo callMethod = context.BaseObjectField.FieldType.GetMethod(memberInfo.Name, methodArgs);
-                        methodIL.Emit(OpCodes.Callvirt, callMethod);
+                        methodIL
+                            .CallVirt(callMethod);
 
                         if (methodReturn != null)
                         {
-                            methodIL.Emit(OpCodes.Stloc_0);
-                            methodIL.Emit(OpCodes.Ldloc_0);
+                            methodIL
+                                .StLoc(methodReturn)
+                                .LdLoc(methodReturn);
                         }
 
-                        methodIL.Emit(OpCodes.Ret);
+                        methodIL.Ret();
 
                         if (methodInfo.IsProperty() == true)
                         {
@@ -398,18 +397,21 @@
                 }
                 else if (memberInfo.MemberType == MemberTypes.Property)
                 {
-                    PropertyBuilder propertyBuilder = context.TypeBuilder.DefineProperty(memberInfo.Name, PropertyAttributes.SpecialName, ((PropertyInfo)memberInfo).PropertyType, null);
+                    var propertyBuilder = context
+                        .TypeBuilder
+                        .NewProperty(
+                            memberInfo.Name,
+                            ((PropertyInfo)memberInfo).PropertyType)
+                        .Attributes(PropertyAttributes.SpecialName);
 
-                    MethodBuilder getMethod;
-                    if (propertyMethods.TryGetValue(memberInfo.PropertyGetName(), out getMethod) == true)
+                    if (propertyMethods.TryGetValue(memberInfo.PropertyGetName(), out IMethodBuilder getMethod) == true)
                     {
-                        propertyBuilder.SetGetMethod(getMethod);
+                        propertyBuilder.GetMethod = getMethod;
                     }
 
-                    MethodBuilder setMethod;
-                    if (propertyMethods.TryGetValue(memberInfo.PropertySetName(), out setMethod) == true)
+                    if (propertyMethods.TryGetValue(memberInfo.PropertySetName(), out IMethodBuilder setMethod) == true)
                     {
-                        propertyBuilder.SetSetMethod(setMethod);
+                        propertyBuilder.SetMethod = setMethod;
                     }
                 }
             }

@@ -1,12 +1,18 @@
 namespace SharpDuckUnitTests
 {
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using SharpDuckUnitTests.Resources;
     using SharpDuck;
+    using SharpDuckUnitTests.Resources;
 
+    /// <summary>
+    /// Create duck unit tests.
+    /// </summary>
     [TestClass]
     public class CreateDuckUnitTests
     {
+        /// <summary>
+        /// Create Simple Duck.
+        /// </summary>
         [TestMethod]
         public void Create_SimpleDuck()
         {
@@ -24,6 +30,9 @@ namespace SharpDuckUnitTests
             Assert.AreEqual("Duck", simpleDuck.Name);
         }
 
+        /// <summary>
+        /// Create simple multiple duck.
+        /// </summary>
         [TestMethod]
         public void Create_SingleMultipleDuck()
         {
@@ -45,6 +54,9 @@ namespace SharpDuckUnitTests
             Assert.AreEqual("0800 DUCK", ((IMultipleDuck2)multipleDuck).Phone);
         }
 
+        /// <summary>
+        /// Create multiple ducks.
+        /// </summary>
         [TestMethod]
         public void Create_MultipleDucks()
         {
@@ -63,7 +75,7 @@ namespace SharpDuckUnitTests
 
             Assert.IsNotNull(multipleDuck1);
             Assert.IsNotNull(multipleDuck2);
-            
+
             Assert.AreEqual("Mr Duck", multipleDuck1.Name);
             Assert.AreEqual("2 Duck Lane", multipleDuck1.Address);
             Assert.AreEqual("0800 DUCK", multipleDuck2.Phone);
